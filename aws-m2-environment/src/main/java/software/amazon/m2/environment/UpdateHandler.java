@@ -37,9 +37,6 @@ public class UpdateHandler extends BaseHandlerStd {
 
         this.logger = logger;
 
-        // See https://github.com/aws-cloudformation/cloudformation-cli-java-plugin/blob/master/src/main/java/software/amazon/cloudformation/proxy/CallChain.java
-        // and https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-test-contract.html
-
         return ProgressEvent.progress(request.getDesiredResourceState(), callbackContext)
                 // We do not need to check if environment exists;
                 // - the updateEnvironment api will throw ResourceNotFoundException in that case,
@@ -80,10 +77,6 @@ public class UpdateHandler extends BaseHandlerStd {
         GetEnvironmentResponse getEnvResponse = getEnvironment(proxyClient, logger, getEnvRequest);
         model.setEnvironmentArn(getEnvResponse.environmentArn());
 
-        /*
-         * Normally, we would return !EnvironmentLifecycle.UPDATING.equals(getEnvResponse.status())
-         * but the 'Updating' enum value is not available in sdk currently.
-         */
         if (EnvironmentLifecycle.AVAILABLE.equals(getEnvResponse.status())) {
             logger.log(String.format("%s [%s] has been successfully updated.",
                     ResourceModel.TYPE_NAME, model.getEnvironmentId()));

@@ -35,10 +35,6 @@ public class CreateHandler extends BaseHandlerStd {
 
         Map<String, String> tags = generateTagsForCreate(request.getDesiredResourceState(), request);
 
-        // See // https://github.com/aws-cloudformation/cloudformation-cli-java-plugin/blob/master/src/main/java/software/amazon/cloudformation/proxy/CallChain.java
-        // and https://docs.aws.amazon.com/cloudformation-cli/latest/userguide/resource-type-test-contract.html
-
-        // Tagging is done by M2 on create
         return ProgressEvent.progress(request.getDesiredResourceState(), callbackContext)
                 .then(progress -> createEnvironment(proxy, proxyClient, progress.getCallbackContext(), progress.getResourceModel(), clientRequestToken, tags))
                 .then(progress -> new ReadHandler().handleRequest(proxy, request, progress.getCallbackContext(), proxyClient, logger));
@@ -97,18 +93,9 @@ public class CreateHandler extends BaseHandlerStd {
         }
     }
 
-    /**
-     * Generate tags to put into resource creation request.
-     * This includes stack tags and user defined resource tags.
-     * Stack tags are tags specified in the AWS console,
-     * they should be shared by all resources created inside that stack.
-     * Resource tags are tags that the customer specified in CloudFormation templates.
-     * CloudFormation system tags (aws:cloudformation:<tag>) are not accepted by M2.
-     */
-    private Map<String, String> generateTagsForCreate(final ResourceModel resourceModel,
+   private Map<String, String> generateTagsForCreate(final ResourceModel resourceModel,
                                                       final ResourceHandlerRequest<ResourceModel> handlerRequest) {
         final Map<String, String> tagMap = new HashMap<>();
-        // Do not merge system tags into Tags map for M2 requests, not supported yet
 
         if (handlerRequest.getDesiredResourceTags() != null) {
             tagMap.putAll(handlerRequest.getDesiredResourceTags());
