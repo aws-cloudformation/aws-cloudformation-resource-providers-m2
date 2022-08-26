@@ -1,0 +1,60 @@
+Description: >
+    Provisions all the dependencies necessary for Environment resource Contract Tests.
+Resources:
+  CTEnvVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsHostnames: true
+      EnableDnsSupport: true
+  CTEnvSubnetGroup1:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.0.0/20
+      VpcId: !Ref CTEnvVPC
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: !Ref "AWS::Region"
+  CTEnvSubnetGroup2:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.32.0/20
+      VpcId: !Ref CTEnvVPC
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: !Ref "AWS::Region"
+  CTEnvFileSystem:
+    Type: AWS::EFS::FileSystem
+    Properties:
+      Encrypted: false
+  CTEnvEFSMountTarget:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref CTEnvFileSystem
+      SecurityGroups:
+        - !GetAtt CTEnvVPC.DefaultSecurityGroup
+      SubnetId: !Ref CTEnvSubnetGroup1
+Outputs:
+  Subnet1:
+    Description: "Subnet1 Id used by Environment contract tests"
+    Value: !Ref CTEnvSubnetGroup1
+    Export:
+      Name: awsm2environmentcto1
+  Subnet2:
+    Description: "Subnet2 Id used by Environment contract tests"
+    Value: !Ref CTEnvSubnetGroup2
+    Export:
+      Name: awsm2environmentcto2
+  CTEnvSecurityGroup:
+    Description: "SecurityGroup Id used by Environment contract tests"
+    Value: !GetAtt CTEnvVPC.DefaultSecurityGroup
+    Export:
+      Name: awsm2environmentcto3
+  CTEnvFileSystem:
+      Description: "EFS file system ID used by Environment contract tests"
+      Value: !Ref CTEnvFileSystem
+      Export:
+        Name: awsm2environmentcto4
+

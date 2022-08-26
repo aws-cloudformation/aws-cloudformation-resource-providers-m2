@@ -1,0 +1,16 @@
+##
+## Update Environment
+##
+AWSTemplateFormatVersion: 2010-09-09
+Description: AWS M2 Environment canary update
+Resources:
+  M2EnvironmentCanary:
+    Type: AWS::M2::Environment
+    Properties:
+      Name: 'canary-test-env'
+      Description: 'canary test environment'
+      EngineType: 'microfocus'
+      InstanceType: 'M2.c5.large'
+      PubliclyAccessible: true
+      Tags:
+        'env-tag': 'updateValue'

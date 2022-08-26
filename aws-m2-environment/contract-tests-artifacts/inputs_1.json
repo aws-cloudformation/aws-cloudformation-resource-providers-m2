@@ -1,0 +1,45 @@
+{
+  "CreateInputs": {
+    "Description": "CT Environment",
+    "EngineType": "bluage",
+    "EngineVersion": "3.1.0",
+    "HighAvailabilityConfig": {
+      "DesiredCapacity": 1
+    },
+    "InstanceType": "M2.m5.large",
+    "Name": "ct-test-env-ba",
+    "PubliclyAccessible": false,
+    "SecurityGroupIds": [
+      "{{awsm2environmentcto3}}"
+    ],
+    "SubnetIds": [
+      "{{awsm2environmentcto1}}",
+      "{{awsm2environmentcto2}}"
+    ],
+    "StorageConfigurations": [
+      {
+        "Efs": {
+          "FileSystemId": "{{awsm2environmentcto4}}",
+          "MountPoint": "/m2/mount/efs"
+        }
+      }
+    ],
+    "PreferredMaintenanceWindow":"mon:10:33-mon:12:33",
+    "Tags": {
+      "tag1": "create1",
+      "tag2": "create2",
+      "tag-foo": "bar"
+    }
+  },
+  "PatchInputs": [
+    {
+      "op": "remove",
+      "path": "/Tags/tag-foo"
+    },
+    {
+      "op": "replace",
+      "path": "/InstanceType",
+      "value": "M2.c5.large"
+    }
+  ]
+}
