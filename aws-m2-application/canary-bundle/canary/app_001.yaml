@@ -1,0 +1,19 @@
+##
+## Create Application
+##
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Resources:
+  M2ApplicationCanary:
+    Type: AWS::M2::Application
+    Properties:
+      Name: 'CanaryApp'
+      EngineType: 'bluage'
+      Definition:
+        Content: '{"resources": [{"resource-type": "listener", "resource-id": "tomcat",
+          "properties": {"port": 8196, "type": "http"}}, {"resource-type": "ba-application",
+          "resource-id": "planets", "properties": {"app-location": "${s3-source}/PlanetsDemo-v1.zip"}}],
+          "source-locations": [{"source-id": "s3-source", "source-type": "s3", "properties":
+          {"s3-bucket": "some-bucket-01", "s3-key-prefix": "ba"}}] }'
+      Tags:
+        sampleTag: 'canary tag value'
