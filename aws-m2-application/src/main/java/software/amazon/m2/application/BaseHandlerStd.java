@@ -4,6 +4,7 @@ import com.google.common.annotations.VisibleForTesting;
 import org.apache.commons.lang3.Validate;
 import software.amazon.awssdk.services.m2.M2Client;
 import software.amazon.awssdk.services.m2.model.ApplicationLifecycle;
+import software.amazon.awssdk.services.m2.model.ApplicationVersionLifecycle;
 import software.amazon.awssdk.services.m2.model.GetApplicationRequest;
 import software.amazon.awssdk.services.m2.model.GetApplicationResponse;
 import software.amazon.cloudformation.exceptions.CfnGeneralServiceException;
@@ -64,6 +65,7 @@ public abstract class BaseHandlerStd extends BaseHandler<CallbackContext> {
                                 : Translator.toGetApplicationRequest(model.getApplicationArn()), proxyClient);
         model.setApplicationArn(getApplicationResponse.applicationArn());
         final ApplicationLifecycle applicationStatus = getApplicationResponse.status();
+        ApplicationVersionLifecycle latestVersionStatus = getApplicationResponse.latestVersion().status();
         switch (applicationStatus) {
             case CREATING:
             case DELETING:
@@ -73,6 +75,10 @@ public abstract class BaseHandlerStd extends BaseHandler<CallbackContext> {
             case READY:
             case STOPPED:
             case AVAILABLE:
+                if (ApplicationVersionLifecycle.CREATING.equals(latestVersionStatus)) {
+                    // update application: a new version is being created
+                    return false;
+                }
                 // stabilized
                 logger.log(String.format("%s [%s] has been stabilized.", ResourceModel.TYPE_NAME, applicationId));
                 return true;

@@ -8,6 +8,8 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.services.m2.model.ApplicationLifecycle;
+import software.amazon.awssdk.services.m2.model.ApplicationVersionLifecycle;
+import software.amazon.awssdk.services.m2.model.ApplicationVersionSummary;
 import software.amazon.awssdk.services.m2.model.ConflictException;
 import software.amazon.awssdk.services.m2.model.CreateApplicationRequest;
 import software.amazon.awssdk.services.m2.model.CreateApplicationResponse;
@@ -70,6 +72,8 @@ public class CreateHandlerTest extends AbstractTestBase {
                 .status(ApplicationLifecycle.AVAILABLE)
                 .description("app description")
                 .tags(desiredTags)
+                .latestVersion(ApplicationVersionSummary.builder().applicationVersion(1)
+                        .status(ApplicationVersionLifecycle.AVAILABLE).build())
                 .build();
         Mockito.when(apiWrapper.getApplication(Mockito.any(GetApplicationRequest.class), Mockito.any()))
                 .thenReturn(getApplicationResponse);
@@ -106,7 +110,7 @@ public class CreateHandlerTest extends AbstractTestBase {
         final ResourceModel model = ResourceModel.builder()
                 .name("app-name")
                 .engineType("microfocus")
-                .definition(Definition.builder().s3Location("s3://bucket/location").content("dummyContext").build())
+                .definition(Definition.builder().s3Location("s3://bucket/location").build())
                 .build();
         CreateApplicationResponse createApplicationResponse = CreateApplicationResponse.builder()
                 .applicationId("app-id")
@@ -120,11 +124,15 @@ public class CreateHandlerTest extends AbstractTestBase {
                 .applicationArn("arn:aws:m2:us-west-2:123456:app/app-id")
                 .name(model.getName())
                 .status(ApplicationLifecycle.CREATING)
+                .latestVersion(ApplicationVersionSummary.builder().applicationVersion(1)
+                        .status(ApplicationVersionLifecycle.CREATING).build())
                 .build();
         final GetApplicationResponse createdResponse = GetApplicationResponse.builder()
                 .applicationId("app-id")
                 .applicationArn("arn:aws:m2:us-west-2:123456:app/app-id")
                 .status(ApplicationLifecycle.AVAILABLE)
+                .latestVersion(ApplicationVersionSummary.builder().applicationVersion(1)
+                        .status(ApplicationVersionLifecycle.AVAILABLE).build())
                 .build();
 
         Mockito.when(apiWrapper.getApplication(Mockito.any(GetApplicationRequest.class), Mockito.any()))
@@ -165,7 +173,7 @@ public class CreateHandlerTest extends AbstractTestBase {
         final ResourceModel model = ResourceModel.builder()
                 .name("app-name")
                 .engineType("microfocus")
-                .definition(Definition.builder().s3Location("s3://bucket/location").content("dummyContext").build())
+                .definition(Definition.builder().s3Location("s3://bucket/location").build())
                 .build();
 
         Mockito.when(apiWrapper.createApplication(Mockito.any(CreateApplicationRequest.class), Mockito.any()))

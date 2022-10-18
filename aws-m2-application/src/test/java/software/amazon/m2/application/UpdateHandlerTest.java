@@ -9,6 +9,7 @@ import org.mockito.Mock;
 import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import software.amazon.awssdk.services.m2.model.ApplicationLifecycle;
+import software.amazon.awssdk.services.m2.model.ApplicationVersionLifecycle;
 import software.amazon.awssdk.services.m2.model.ApplicationVersionSummary;
 import software.amazon.awssdk.services.m2.model.ConflictException;
 import software.amazon.awssdk.services.m2.model.GetApplicationRequest;
@@ -28,8 +29,11 @@ import software.amazon.cloudformation.proxy.ProgressEvent;
 import software.amazon.cloudformation.proxy.ResourceHandlerRequest;
 import software.amazon.m2.common.AbstractTestBase;
 
+import java.util.Map;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.any;
@@ -63,7 +67,8 @@ public class UpdateHandlerTest extends AbstractTestBase {
         final GetApplicationResponse getApplicationResponse = GetApplicationResponse.builder()
                 .applicationArn(appArn)
                 .applicationId(appId)
-                .latestVersion(ApplicationVersionSummary.builder().applicationVersion(1).build())
+                .latestVersion(ApplicationVersionSummary.builder().applicationVersion(1)
+                        .status(ApplicationVersionLifecycle.AVAILABLE).build())
                 .status(ApplicationLifecycle.AVAILABLE)
                 .build();
         when(apiWrapper.getApplication(any(GetApplicationRequest.class), Mockito.any()))
@@ -105,7 +110,8 @@ public class UpdateHandlerTest extends AbstractTestBase {
         final GetApplicationResponse getApplicationResponse = GetApplicationResponse.builder()
                 .applicationArn(appArn)
                 .applicationId(appId)
-                .latestVersion(ApplicationVersionSummary.builder().applicationVersion(1).build())
+                .latestVersion(ApplicationVersionSummary.builder().applicationVersion(1)
+                        .status(ApplicationVersionLifecycle.AVAILABLE).build())
                 .status(ApplicationLifecycle.AVAILABLE)
                 .build();
         when(apiWrapper.getApplication(any(GetApplicationRequest.class), Mockito.any()))
@@ -169,7 +175,9 @@ public class UpdateHandlerTest extends AbstractTestBase {
         final GetApplicationResponse getApplicationResponse = GetApplicationResponse.builder()
                 .applicationArn(appArn)
                 .applicationId(appId)
-                .latestVersion(ApplicationVersionSummary.builder().applicationVersion(1).build())
+                .latestVersion(ApplicationVersionSummary.builder().applicationVersion(1)
+                        .status(ApplicationVersionLifecycle.AVAILABLE)
+                        .build())
                 .status(ApplicationLifecycle.AVAILABLE)
                 .build();
         when(apiWrapper.getApplication(any(GetApplicationRequest.class), Mockito.any()))
@@ -224,7 +232,8 @@ public class UpdateHandlerTest extends AbstractTestBase {
         final GetApplicationResponse getApplicationResponse = GetApplicationResponse.builder()
                 .applicationArn(appArn)
                 .applicationId(appId)
-                .latestVersion(ApplicationVersionSummary.builder().applicationVersion(1).build())
+                .latestVersion(ApplicationVersionSummary.builder().applicationVersion(1)
+                        .status(ApplicationVersionLifecycle.AVAILABLE).build())
                 .status(ApplicationLifecycle.AVAILABLE)
                 .build();
         when(apiWrapper.getApplication(any(GetApplicationRequest.class), Mockito.any()))
@@ -316,6 +325,69 @@ public class UpdateHandlerTest extends AbstractTestBase {
 
         verify(apiWrapper).updateApplication(any(UpdateApplicationRequest.class), Mockito.any());
         verify(apiWrapper, times(2)).getApplication(any(GetApplicationRequest.class), Mockito.any());
+    }
+
+    @Test
+    public void handleRequest_waitUntilStabilized() {
+        final ResourceModel model = ResourceModel.builder()
+                .name("app-name")
+                .engineType("microfocus")
+                .definition(Definition.builder().s3Location("s3://bucket/location").build())
+                .build();
+        UpdateApplicationResponse updateApplicationResponse = UpdateApplicationResponse.builder()
+                .applicationVersion(2)
+                .build();
+
+        Mockito.when(apiWrapper.updateApplication(Mockito.any(UpdateApplicationRequest.class), Mockito.any()))
+                .thenReturn(updateApplicationResponse);
+
+        final GetApplicationResponse updatingResponse = GetApplicationResponse.builder()
+                .applicationId("app-id")
+                .applicationArn("arn:aws:m2:us-west-2:123456:app/app-id")
+                .name(model.getName())
+                .status(ApplicationLifecycle.AVAILABLE)
+                .latestVersion(ApplicationVersionSummary.builder().applicationVersion(2)
+                        .status(ApplicationVersionLifecycle.CREATING).build())
+                .build();
+        final GetApplicationResponse updatedResponse = GetApplicationResponse.builder()
+                .applicationId("app-id")
+                .applicationArn("arn:aws:m2:us-west-2:123456:app/app-id")
+                .status(ApplicationLifecycle.AVAILABLE)
+                .latestVersion(ApplicationVersionSummary.builder().applicationVersion(1)
+                        .status(ApplicationVersionLifecycle.AVAILABLE).build())
+                .build();
+
+        Mockito.when(apiWrapper.getApplication(Mockito.any(GetApplicationRequest.class), Mockito.any()))
+                .thenReturn(updatingResponse)
+                .thenReturn(updatingResponse)
+                .thenReturn(updatedResponse);
+
+        final ImmutableMap<String, String> tags = ImmutableMap.of("Key1", "Value1", "Key2", "Value2");
+        Mockito.when(apiWrapper.listTags(Mockito.any(ListTagsForResourceRequest.class), Mockito.any()))
+                .thenReturn(ListTagsForResourceResponse.builder().tags(tags).build());
+
+        final ResourceHandlerRequest<ResourceModel> request = ResourceHandlerRequest.<ResourceModel>builder()
+                .desiredResourceState(model)
+                .desiredResourceTags(Map.of("k1", "v1"))
+                .clientRequestToken("client-token")
+                .build();
+        final ProgressEvent<ResourceModel, CallbackContext> response
+                = handler.handleRequest(proxy, request, new CallbackContext(), logger);
+
+        assertNotNull(response);
+        assertEquals(OperationStatus.SUCCESS, response.getStatus());
+        assertEquals(0, response.getCallbackDelaySeconds());
+        assertNull(response.getErrorCode());
+
+        final ResourceModel actualModel = response.getResourceModel();
+        assertNotNull(actualModel);
+        assertEquals("app-id", actualModel.getApplicationId());
+        assertEquals(updatedResponse.applicationArn(), actualModel.getApplicationArn());
+        assertEquals(tags, actualModel.getTags());
+
+        verify(apiWrapper).updateApplication(Mockito.any(UpdateApplicationRequest.class), Mockito.any());
+        verify(apiWrapper, times(4)).getApplication(Mockito.any(GetApplicationRequest.class), Mockito.any());
+        verify(apiWrapper).listTags(Mockito.any(ListTagsForResourceRequest.class), Mockito.any());
     }
 
     private ResourceModel getResourceModel() {
