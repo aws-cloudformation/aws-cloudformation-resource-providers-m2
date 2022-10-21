@@ -1,4 +1,4 @@
-## AWS Mainframe Moderanization (M2)
+## AWS Mainframe Modernization (M2)
 
 AWS CloudFormation integration with AWS M2 resources.
 
